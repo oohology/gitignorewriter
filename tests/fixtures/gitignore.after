@@ -1,0 +1,9 @@
+vendor/
+databases/*.sql
+working/
+www/install/
+www/installcms.php
+www/install.php
+.DS*
+._*
+.sass-cache*

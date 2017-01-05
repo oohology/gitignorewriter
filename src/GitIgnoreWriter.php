@@ -111,9 +111,41 @@ class GitIgnoreWriter
             $this->buffer[] = $line;
             ++$this->pointer;
         }
-        array_merge($this->buffer, $after);
+        $this->buffer = array_merge($this->buffer, $after);
 
         return $this;
+    }
+
+    /**
+     * Inserts lines into the file before the given value
+     *
+     * @param string $find
+     * @param array|string $input
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function before($find, $input)
+    {
+        if(false !== ($pointer = array_search(trim($find), $this->buffer, true))) {
+            $this->pointer = $pointer;
+        }
+
+        return $this->add($input);
+    }
+
+    /**
+     * Inserts lines into the file after the given value
+     *
+     * @param string $find
+     * @param array|string $input
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function after($find, $input)
+    {
+        if(false !== ($pointer = array_search(trim($find), $this->buffer, true))) {
+            $this->pointer = ++$pointer;
+        }
+
+        return $this->add($input);
     }
 
     /**
@@ -164,7 +196,7 @@ class GitIgnoreWriter
      */
     public function exists($value)
     {
-        return in_array($value, $this->buffer);
+        return in_array($value, $this->buffer, true);
     }
 
     /**

@@ -11,11 +11,13 @@ class GitIgnoreWriterTest extends PHPUnit_Framework_TestCase
 
         $this->fixtures = [
             'input' => 'gitignore.example',
+            'output' => 'gitignore.output',
+            'nonexistent' => 'nonexistent.example',
             'appendSingle' => 'gitignore.appendSingle',
             'appendMultiline' => 'gitignore.appendMultiline',
             'appendArray' => 'gitignore.appendArray',
-            'output' => 'gitignore.output',
-            'nonexistent' => 'nonexistent.example',
+            'insertBefore' => 'gitignore.before',
+            'insertAfter' => 'gitignore.after',
         ];
     }
 
@@ -135,5 +137,33 @@ class GitIgnoreWriterTest extends PHPUnit_Framework_TestCase
             ])->save($this->getFixturePath('output'));
 
         $this->assertFileEquals($this->getFixturePath('appendArray'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testInsertBefore($writer)
+    {
+        $writer
+            ->before(
+                'working/',
+                ['', 'insertedBefore', '']
+            )->save($this->getFixturePath('output'));
+
+        $this->assertFileEquals($this->getFixturePath('insertBefore'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testInsertAfter($writer)
+    {
+        $writer
+            ->after(
+                'www/installcms.php',
+                'www/install.php'
+            )->save($this->getFixturePath('output'));
+
+        $this->assertFileEquals($this->getFixturePath('insertAfter'), $this->getFixturePath('output'));
     }
 }
