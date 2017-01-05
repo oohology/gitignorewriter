@@ -8,7 +8,7 @@ class GitIgnoreWriter
      * The full contents of the file during processing
      * @var array
      */
-    protected $buffer = [];
+    protected $buffer;
 
     /**
      * Path where the output file will be written
@@ -31,6 +31,8 @@ class GitIgnoreWriter
      */
     public function __construct($filePath = null)
     {
+        $this->buffer = [];
+
         if (!is_null($filePath)) {
             if (is_file($filePath)) {
                 $this->load($filePath);
