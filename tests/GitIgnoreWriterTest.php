@@ -5,20 +5,135 @@ use GitIgnoreWriter\GitIgnoreWriter;
 class GitIgnoreWriterTest extends PHPUnit_Framework_TestCase
 {
 
-    public $writer;
+    protected $fixtures;
 
     public function setUp() {
-        $this->writer = new GitIgnoreWriter;
+
+        $this->fixtures = [
+            'input' => 'gitignore.example',
+            'appendSingle' => 'gitignore.appendSingle',
+            'appendMultiline' => 'gitignore.appendMultiline',
+            'appendArray' => 'gitignore.appendArray',
+            'output' => 'gitignore.output',
+            'nonexistent' => 'nonexistent.example',
+        ];
     }
 
-    public function testLoad() {
-        $result = $this->writer->load(__DIR__.'/fixtures/gitignore.example');
-        $this->assertInstanceOf(GitIgnoreWriter\GitIgnoreWriter::class, $result);
+    protected function getFixturePath($key)
+    {
+        if(!isset($this->fixtures[$key])) {
+            throw new \Exception('invalid fixture');
+        }
+        return __DIR__.'/fixtures/'.$this->fixtures[$key];
     }
 
-    public function testLoadException() {
+    protected function tearDown()
+    {
+        $this->cleanup();
+    }
+
+    protected function cleanup()
+    {
+        if (is_file($this->getFixturePath('output'))) {
+            unlink($this->getFixturePath('output'));
+        }
+    }
+
+    public function testConstructWithPath()
+    {
+        $writer = new GitIgnoreWriter($this->getFixturePath('input'));
+        $this->assertCount(8, $writer->toArray());
+    }
+
+    public function testLoad()
+    {
+        $writer = (new GitIgnoreWriter)->load($this->getFixturePath('input'));
+        $this->assertInstanceOf(GitIgnoreWriter::class, $writer);
+
+        return $writer;
+    }
+
+    public function testLoadException()
+    {
         $this->expectException(\Exception::class);
-        $this->writer->load(__DIR__.'/fixtures/nonexistant.example');
+        (new GitIgnoreWriter)->load($this->getFixturePath('nonexistent'));
     }
 
+    /**
+     * @depends testLoad
+     * @dataProvider existenceDataProvider
+     */
+    public function testExists($value, $writer)
+    {
+        $this->assertTrue($writer->exists($value));
+    }
+
+    public function existenceDataProvider()
+    {
+        return [
+            ['vendor/'],
+            ['databases/*.sql'],
+            ['._*'],
+        ];
+    }
+
+    /**
+     * @depends testLoad
+     * @dataProvider nonExistenceDataProvider
+     */
+    public function testNotExists($value, $writer)
+    {
+        $this->assertFalse($writer->exists($value));
+    }
+
+    public function nonExistenceDataProvider()
+    {
+        return [
+            ['vendor'],
+            ['*.sql'],
+            ['whatever'],
+        ];
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testAppendSingle($writer)
+    {
+        $writer
+            ->add('a/Single/Path')
+            ->save($this->getFixturePath('output'));
+
+        $this->assertFileEquals($this->getFixturePath('appendSingle'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testAppendMultiline($writer)
+    {
+        $writer
+            ->add('
+                First/Line/Path
+                Second/Line/Path')
+            ->save($this->getFixturePath('output'));
+
+        $this->assertFileEquals($this->getFixturePath('appendMultiline'), $this->getFixturePath('output'));
+
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testAppendArray($writer)
+    {
+        $writer
+            ->add([
+                'array/1',
+                'array/2',
+                'array/3',
+            ])->save($this->getFixturePath('output'));
+
+        $this->assertFileEquals($this->getFixturePath('appendArray'), $this->getFixturePath('output'));
+    }
 }

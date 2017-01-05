@@ -18,6 +18,11 @@ class GitIgnoreWriter
     protected $outputPath;
 
     /**
+     * Line number to write next line
+     */
+    protected $pointer = 0;
+
+    /**
      * Create the instance. If a $filePath is given it must be writable, although
      * output can be later redirected to a different path.
      *
@@ -46,9 +51,9 @@ class GitIgnoreWriter
         if (!is_file($filePath) || (!false === ($buffer = file($filePath)))) {
             throw new \Exception(sprintf('Unable to read file at %s.', $filePath));
         }
-        $this->buffer = array_map(function($line) {
-           return rtrim($line, "\r\n") . PHP_EOL;
-        });
+        $this->buffer = array_map('trim', $buffer);
+
+        $this->pointer = count($this->buffer);
 
         return $this;
     }
@@ -73,10 +78,58 @@ class GitIgnoreWriter
 
     /**
      * Returns the current buffer as a raw array
+     *
+     * @return array
      */
     public function toArray()
     {
         return $this->buffer;
+    }
+
+    /**
+     * Add lines to the file at the current pointer
+     *
+     * @param array|string $input
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function add($input)
+    {
+        $inputLines = $this->parseInput($input);
+
+        foreach($inputLines as $k => $line) {
+            if(
+                strlen($line)
+                && (strpos($line, '#') !== 0)
+                && $this->exists($line)
+            ) {
+                unset($inputLines[$k]);
+            }
+        }
+
+        $after = array_splice($this->buffer, $this->pointer);
+        foreach($inputLines as $line) {
+            $this->buffer[] = $line;
+            ++$this->pointer;
+        }
+        array_merge($this->buffer, $after);
+
+        return $this;
+    }
+
+    /**
+     * Parse an input value into an array of lines
+     */
+    protected function parseInput($input)
+    {
+        if(is_array($input)) {
+            $result = [];
+            foreach($input as $value) {
+                $result = array_merge($result, $this->parseInput($value));
+            }
+            return $result;
+        }
+
+        return array_values(array_map('trim', preg_split('/[\r\n]/', $input)));
     }
 
 
@@ -104,45 +157,14 @@ class GitIgnoreWriter
     }
 
     /**
-     * Find the existing value of the given environment variable. Returns false
-     * if the variable doesn't exist, or an array containing the full line as
-     * well as its components broken out.
+     * Test if the given value exists in the file
      *
-     * @param type $key
-     * @return boolean|array
+     * @param string $value
+     * @return boolean
      */
-    public function get($key)
+    public function exists($value)
     {
-        // first, find the quote style
-        $pattern = '/^(export\h)?\h*'.preg_quote($key, '/').'\h*=\h*(?P<quote>[\'"])?/m';
-        if (!preg_match($pattern, $this->buffer, $m)) {
-            return false;
-        }
-
-        if (!empty($m['quote'])) {
-            // if it has quotes then allow for escaped quotes, whitespace, etc.
-            $quote = $m['quote'];
-            $pattern = '/^(?P<export>export\h)?\h*(?P<key>'.preg_quote($key, '/').')\h*=\h*'.$quote.'(?P<value>[^'.$quote.'\\\\]*(?:\\\\.[^'.$quote.'\\\\]*)*)'.$quote.'\h*(?:#\h*(?P<comment>.*))?$/m';
-            if (!preg_match($pattern, $this->buffer, $m)) {
-                return false;
-            }
-            $m['value'] = str_replace('\\\\', '\\', $m['value']);
-            $m['value'] = str_replace("\\$quote", $quote, $m['value']);
-        } else {
-            // if it's not quoted then it should just be one string of basic word characters
-            $pattern = '/^(?P<export>export\h)?\h*(?P<key>'.preg_quote($key, '/').')\h*=\h*(?P<value>.*?)\h*(?:#\h*(?P<comment>.*))?$/m';
-            if (!preg_match($pattern, $this->buffer, $m)) {
-                return false;
-            }
-        }
-
-        return [
-            'line' => $m[0],
-            'export' => (strlen($m['export']) > 0),
-            'key' => $m['key'],
-            'value' => $m['value'],
-            'comment' => isset($m['comment']) ? $m['comment'] : ''
-        ];
+        return in_array($value, $this->buffer);
     }
 
     /**
