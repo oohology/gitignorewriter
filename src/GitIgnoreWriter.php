@@ -87,6 +87,22 @@ class GitIgnoreWriter
     }
 
     /**
+     * Parse an input value into an array of lines
+     */
+    protected function parseInput($input)
+    {
+        if(is_array($input)) {
+            $result = [];
+            foreach($input as $value) {
+                $result = array_merge($result, $this->parseInput($value));
+            }
+            return $result;
+        }
+
+        return array_values(array_map('trim', preg_split('/[\r\n]/', $input)));
+    }
+
+    /**
      * Add lines to the file at the current pointer
      *
      * @param array|string $input
@@ -111,7 +127,7 @@ class GitIgnoreWriter
             $this->buffer[] = $line;
             ++$this->pointer;
         }
-        $this->buffer = array_merge($this->buffer, $after);
+        $this->buffer = array_values(array_merge($this->buffer, $after));
 
         return $this;
     }
@@ -149,21 +165,77 @@ class GitIgnoreWriter
     }
 
     /**
-     * Parse an input value into an array of lines
+     * Sets the pointer for writing to the beginning of the file
+     * @return \GitIgnoreWriter\GitIgnoreWriter
      */
-    protected function parseInput($input)
+    public function rewind()
     {
-        if(is_array($input)) {
-            $result = [];
-            foreach($input as $value) {
-                $result = array_merge($result, $this->parseInput($value));
-            }
-            return $result;
-        }
-
-        return array_values(array_map('trim', preg_split('/[\r\n]/', $input)));
+        $this->pointer = 0;
+        return $this;
     }
 
+    /**
+     * Sets the pointer for writing to a given line number
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function seek($line)
+    {
+        $this->pointer = min(count($this->buffer), $line);
+        return $this;
+    }
+
+    /**
+     * Sets the pointer for writing to the end of the file
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function eof()
+    {
+        $this->pointer = count($this->buffer);
+        return $this;
+    }
+
+    /**
+     * Deletes a given line from the file
+     *
+     * @param string $value
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function delete($value)
+    {
+        if(false !== ($pointer = array_search(trim($value), $this->buffer))) {
+            unset($this->buffer[$pointer]);
+            $this->buffer = array_values($this->buffer);
+        }
+        return $this;
+    }
+
+    /**
+     * Deletes lines starting at a given line offset
+     *
+     * @param int $offset 0-based line number to start at
+     * @param int $count number of lines to delete
+     * @return \GitIgnoreWriter\GitIgnoreWriter
+     */
+    public function deleteOffset($offset, $count = 1)
+    {
+        for($i = $offset; $i < ($offset + $count); $i++) {
+            unset($this->buffer[$i]);
+
+        }
+        $this->buffer = array_values($this->buffer);
+        return $this;
+    }
+
+    /**
+     * Test if the given value exists in the file
+     *
+     * @param string $value
+     * @return boolean
+     */
+    public function exists($value)
+    {
+        return in_array($value, $this->buffer, true);
+    }
 
     /**
      * Write the changes to the file
@@ -186,17 +258,6 @@ class GitIgnoreWriter
         }
 
         return $this;
-    }
-
-    /**
-     * Test if the given value exists in the file
-     *
-     * @param string $value
-     * @return boolean
-     */
-    public function exists($value)
-    {
-        return in_array($value, $this->buffer, true);
     }
 
     /**

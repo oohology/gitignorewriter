@@ -1,0 +1,10 @@
+vendor/
+databases/*.sql
+
+# Seek to line 2
+working/
+www/install/
+www/installcms.php
+.DS*
+._*
+.sass-cache*

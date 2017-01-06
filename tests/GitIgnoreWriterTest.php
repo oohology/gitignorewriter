@@ -18,6 +18,11 @@ class GitIgnoreWriterTest extends PHPUnit_Framework_TestCase
             'appendArray' => 'gitignore.appendArray',
             'insertBefore' => 'gitignore.before',
             'insertAfter' => 'gitignore.after',
+            'rewind' => 'gitignore.rewind',
+            'eof' => 'gitignore.eof',
+            'seek' => 'gitignore.seek',
+            'delete' => 'gitignore.delete',
+            'deleteOffset' => 'gitignore.deleteOffset',
         ];
     }
 
@@ -37,7 +42,7 @@ class GitIgnoreWriterTest extends PHPUnit_Framework_TestCase
     protected function cleanup()
     {
         if (is_file($this->getFixturePath('output'))) {
-            unlink($this->getFixturePath('output'));
+            //unlink($this->getFixturePath('output'));
         }
     }
 
@@ -165,5 +170,61 @@ class GitIgnoreWriterTest extends PHPUnit_Framework_TestCase
             )->save($this->getFixturePath('output'));
 
         $this->assertFileEquals($this->getFixturePath('insertAfter'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testRewind($writer)
+    {
+        $writer->rewind()->add('# Comment at the beginning!')->save($this->getFixturePath('output'));
+        $this->assertFileEquals($this->getFixturePath('rewind'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testEof($writer)
+    {
+        $writer
+            ->before('www/install/', '# added a comment here')
+            ->eof()
+            ->add('# and seeked back to EOF')
+            ->save($this->getFixturePath('output'));
+        $this->assertFileEquals($this->getFixturePath('eof'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testSeek($writer)
+    {
+        $writer
+            ->seek(2)
+            ->add(['', '# Seek to line 2'])
+            ->save($this->getFixturePath('output'));
+        $this->assertFileEquals($this->getFixturePath('seek'), $this->getFixturePath('output'));
+    }
+
+    /**
+     * @depends clone testLoad
+     */
+    public function testDelete($writer)
+    {
+        $writer
+            ->delete('working/')
+            ->save($this->getFixturePath('output'));
+        $this->assertFileEquals($this->getFixturePath('delete'), $this->getFixturePath('output'));
+    }
+
+   /**
+     * @depends clone testLoad
+     */
+    public function testDeleteOffset($writer)
+    {
+        $writer
+            ->deleteOffset(5, 2)
+            ->save($this->getFixturePath('output'));
+        $this->assertFileEquals($this->getFixturePath('deleteOffset'), $this->getFixturePath('output'));
     }
 }

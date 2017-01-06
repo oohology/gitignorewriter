@@ -1,0 +1,10 @@
+vendor/
+databases/*.sql
+working/
+# added a comment here
+www/install/
+www/installcms.php
+.DS*
+._*
+.sass-cache*
+# and seeked back to EOF

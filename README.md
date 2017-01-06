@@ -86,6 +86,32 @@ $writer->add([
 ])->save();
 ```
 
+Manually seeking
+-------------
+The `rewind`, `seek` and `eof` methods allow you to manually seek the internal pointer
+to a specific line in the file. Any subsequent `add` will insert content relative
+to that position.
+
+ - `rewind`: set the pointer to the beginning of the file
+ - `seek`: set the pointer to a specific line number starting at 0
+ - `eof`: set the pointer to append to the end of the file
+
+Deleting Lines
+-------------
+The `delete` and `deleteOffset` methods provide ways to remove lines from the file. Note that the remaining lines are renumbered after deletion.
+
+ - `delete($value)`: remove a matching line from the file
+ - `deleteOffset($offset, $count = 1)`: delete one or more lines, starting at a specific 0-based line number.
+
+Examples:
+```
+$writer
+    ->delete('working/')
+    ->save();
+
+$writer->deleteOffset(5, 2)->save();
+```
+
 Test if a line exists
 --------------------
 The `exists` method returns a boolean to test if a line exists in the file.
